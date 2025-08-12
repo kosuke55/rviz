@@ -131,6 +131,11 @@ void QosProfileProperty::updateQosProfile()
     reliability_policies, reliability_policy_property_, profile.reliability);
   profile.durability = get_profile(
     durability_policies, durability_policy_property_, profile.durability);
+  
+  // Debug log to track QoS changes
+  printf("QosProfileProperty::updateQosProfile - Durability: %d, Reliability: %d, History: %d, Depth: %zu\n",
+    profile.durability, profile.reliability, profile.history, profile.depth);
+  
   qos_changed_callback_(rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(profile), profile));
 }
 

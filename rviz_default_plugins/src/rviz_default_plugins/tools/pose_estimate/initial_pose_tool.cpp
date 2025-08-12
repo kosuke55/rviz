@@ -76,7 +76,17 @@ void InitialPoseTool::onInitialize()
 {
   PoseTool::onInitialize();
   qos_profile_property_->initialize(
-    [this](rclcpp::QoS profile) {this->qos_profile_ = profile;});
+    [this](rclcpp::QoS profile) {
+      this->qos_profile_ = profile;
+      RCLCPP_INFO(rclcpp::get_logger("InitialPoseTool"), 
+        "QoS profile updated - Durability: %d, Reliability: %d, History: %d, Depth: %zu",
+        profile.get_rmw_qos_profile().durability,
+        profile.get_rmw_qos_profile().reliability,
+        profile.get_rmw_qos_profile().history,
+        profile.get_rmw_qos_profile().depth);
+      // Recreate publisher with new QoS settings
+      updateTopic();
+    });
   setName("2D Pose Estimate");
   updateTopic();
 }
@@ -86,6 +96,15 @@ void InitialPoseTool::updateTopic()
   // TODO(anhosi, wjwwood): replace with abstraction for publishers once available
   rclcpp::Node::SharedPtr raw_node =
     context_->getRosNodeAbstraction().lock()->get_raw_node();
+  
+  RCLCPP_INFO(raw_node->get_logger(), 
+    "Creating publisher with QoS - Durability: %d, Reliability: %d, History: %d, Depth: %zu, Topic: %s",
+    qos_profile_.get_rmw_qos_profile().durability,
+    qos_profile_.get_rmw_qos_profile().reliability,
+    qos_profile_.get_rmw_qos_profile().history,
+    qos_profile_.get_rmw_qos_profile().depth,
+    topic_property_->getStdString().c_str());
+  
   publisher_ = raw_node->
     template create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
     topic_property_->getStdString(), qos_profile_);
@@ -95,6 +114,11 @@ void InitialPoseTool::updateTopic()
 void InitialPoseTool::onPoseSet(double x, double y, double theta)
 {
   std::string fixed_frame = context_->getFixedFrame().toStdString();
+
+  RCLCPP_INFO(rclcpp::get_logger("InitialPoseTool"), 
+    "Publishing pose with current QoS - Durability: %d, Topic: %s",
+    qos_profile_.get_rmw_qos_profile().durability,
+    topic_property_->getStdString().c_str());
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.header.frame_id = fixed_frame;
